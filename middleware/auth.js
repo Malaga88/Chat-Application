@@ -14,6 +14,26 @@ const authenticateToken = (req, res, next) => {
     } );
 };
 
+const generateAccessToken = (user) => {
+    return JsonWebToken.sign({ id: user._id, username: user.username }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRES });
+};
+
+const generateRefreshToken = async (user) => {
+    const refreshToken = JsonWebToken.sign({ id: user._id, username: user.username }, process.env.REFRESH_TOKEN_SECRET);
+    const newRefreshToken = new refreshTokenSchema({ token: refreshToken, userId: user._id });
+    await newRefreshToken.save();
+    return refreshToken;
+};
+
+const saveRefreshToken = async (user, refreshToken) => {
+    const newRefreshToken = new refreshTokenSchema({ token: refreshToken, userId: user._id });
+    await newRefreshToken.save();
+};
+
+const deleteRefreshToken = async (refreshToken) => {
+    await refreshTokenSchema.deleteOne({ token: refreshToken });
+};
+
 const verifyRefreshToken = async (req, res, next) => {
     const { refreshToken } = req.body;
     if (!refreshToken) return res.sendStatus(401);
@@ -33,4 +53,4 @@ const verifyRefreshToken = async (req, res, next) => {
     }
 };
 
-export { authenticateToken, verifyRefreshToken };
+export { authenticateToken, verifyRefreshToken, generateAccessToken, generateRefreshToken, saveRefreshToken, deleteRefreshToken };

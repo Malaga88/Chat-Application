@@ -7,7 +7,7 @@ import connectDB from './config/db.js';
 import authRouter from './routes/auth.js';
 import userRouter from './routes/user.js';
 import chatRouter from './routes/chat.js';
-import messageRouter from './routes/messages.js';
+import messageRouter from './routes/message.js';
 import jwt from 'jsonwebtoken';
 import User from './models/User.js';
 

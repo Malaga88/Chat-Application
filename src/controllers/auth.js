@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
-import RefreshToken from '../models/RefreshToken.js';
+import User from '../model/user.js';
+import RefreshToken from '../model/refreshToken.js';
 import bcrypt from 'bcryptjs';
 
 const generateAccessToken = (user) => {

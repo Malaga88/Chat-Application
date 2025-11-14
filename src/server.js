@@ -9,7 +9,7 @@ import userRouter from './routes/user.js';
 import chatRouter from './routes/chat.js';
 import messageRouter from './routes/message.js';
 import jwt from 'jsonwebtoken';
-import User from './models/User.js';
+import User from './model/user.js';
 
 const app = express();
 const httpServer = createServer(app);

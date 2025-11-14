@@ -1,13 +1,51 @@
-const mongoose = require('mongoose');
-const { create } = require('./user');
+import mongoose from 'mongoose';
 
 const messageSchema = new mongoose.Schema({
-  sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  receiver: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  content: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
-  timestamp: { type: Date, default: Date.now }
+  chat: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Chat',
+    required: true
+  },
+  sender: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true 
+  },
+  content: { 
+    type: String, 
+    required: true,
+    trim: true
+  },
+  messageType: {
+    type: String,
+    enum: ['text', 'image', 'file'],
+    default: 'text'
+  },
+  fileUrl: {
+    type: String
+  },
+  readBy: [{
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    readAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  createdAt: { 
+    type: Date, 
+    default: Date.now 
+  },
+  updatedAt: { 
+    type: Date, 
+    default: Date.now 
+  }
 });
 
-module.exports = mongoose.model('Message', messageSchema);
+// Indexes for faster queries
+messageSchema.index({ chat: 1, createdAt: -1 });
+messageSchema.index({ sender: 1 });
+
+export default mongoose.model('Message', messageSchema);

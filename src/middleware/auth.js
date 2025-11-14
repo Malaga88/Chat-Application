@@ -1,56 +1,69 @@
-import { JsonWebToken } from "jsonwebtoken";
-import {userSchema} from "../models/userModel.js";
-import {refreshTokenSchema} from "../models/refreshTokenModel.js";
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
+import RefreshToken from '../models/RefreshToken.js';
 
-const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if (token == null) return res.sendStatus(401);
-
-    JsonWebToken.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403);
-        req.user = user;
-        next();
-    } );
-};
-
-const generateAccessToken = (user) => {
-    return JsonWebToken.sign({ id: user._id, username: user.username }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRES });
-};
-
-const generateRefreshToken = async (user) => {
-    const refreshToken = JsonWebToken.sign({ id: user._id, username: user.username }, process.env.REFRESH_TOKEN_SECRET);
-    const newRefreshToken = new refreshTokenSchema({ token: refreshToken, userId: user._id });
-    await newRefreshToken.save();
-    return refreshToken;
-};
-
-const saveRefreshToken = async (user, refreshToken) => {
-    const newRefreshToken = new refreshTokenSchema({ token: refreshToken, userId: user._id });
-    await newRefreshToken.save();
-};
-
-const deleteRefreshToken = async (refreshToken) => {
-    await refreshTokenSchema.deleteOne({ token: refreshToken });
-};
-
-const verifyRefreshToken = async (req, res, next) => {
-    const { refreshToken } = req.body;
-    if (!refreshToken) return res.sendStatus(401);
-
-    try {
-        const storedToken = await refreshTokenSchema.findOne({ token: refreshToken });
-        if (!storedToken) return res.sendStatus(403);
-
-        JsonWebToken.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
-            if (err) return res.sendStatus(403);
-            req.user = user;
-            next();
-        });
-    } catch (error) {
-        console.error(error);
-        res.sendStatus(500);
+export const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ message: 'Access token required' });
+  }
+  
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ message: 'Invalid or expired token' });
     }
+    req.user = user;
+    next();
+  });
 };
 
-export { authenticateToken, verifyRefreshToken, generateAccessToken, generateRefreshToken, saveRefreshToken, deleteRefreshToken };
+export const verifyRefreshToken = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(401).json({ message: 'Refresh token required' });
+    }
+    
+    const storedToken = await RefreshToken.findOne({ token: refreshToken });
+    if (!storedToken) {
+      return res.status(403).json({ message: 'Invalid refresh token' });
+    }
+    
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
+      if (err) {
+        return res.status(403).json({ message: 'Invalid or expired refresh token' });
+      }
+      req.user = user;
+      next();
+    });
+  } catch (error) {
+    console.error('Verify refresh token error:', error);
+    res.status(500).json({ 
+      message: 'Internal server error',
+      error: error.message 
+    });
+  }
+};
+
+// Optional: Middleware to check if user exists
+export const checkUserExists = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    req.userDoc = user;
+    next();
+  } catch (error) {
+    console.error('Check user exists error:', error);
+    res.status(500).json({ 
+      message: 'Internal server error',
+      error: error.message 
+    });
+  }
+};
